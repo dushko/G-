@@ -15,6 +15,9 @@ from gi.repository import GdkPixbuf
 from gi.repository import Gdk
 from gi.repository import cairo
 
+from g.gui.common.rectangle import Rectangle
+from g.gui.common.layoutengine import LayoutEngine
+
 import time
 import os
 from orca.guilabels import CARET_NAVIGATION_GRAB_FOCUS
@@ -125,6 +128,7 @@ class Selection:
 selection = Selection()
 
 
+
 class ThumbnailsView(Gtk.Layout):
     scroll_value = 0
     scroll = False
@@ -143,18 +147,15 @@ class ThumbnailsView(Gtk.Layout):
     def __init__(self):
         Gtk.Layout.__init__(self)
 
-        w = Gtk.Window()  # create a fake window
-        w.realize()  # realize it ...
-        style = w.get_style()  # ... to obtain the REAL theme style
-        del(w)  # it's the only trick i've found
-
-        #BACKGROUND = style.base[Gtk.NORMAL]
+        self.layoutEngine = LayoutEngine()
         self.loading_pixbuf = GdkPixbuf.Pixbuf.new_from_file('../../../data/gfx/refresh.png')
         self.selection = selection
-        #self.modify_bg(Gtk.StateFlags.NORMAL, BACKGROUND)
-
         self.thumbnail_pixbufs = {}
         self.exif_tags = {}
+
+        self.height = 100
+        self.width = 100
+        self.visible = Rectangle(0, 0, 1, 1)
 
         self.connect('draw', self.on_draw_event)
         self.connect('size-allocate', self.on_size_allocate)
@@ -175,8 +176,6 @@ class ThumbnailsView(Gtk.Layout):
         hadj.connect('value-changed', self.on_adjustment_value_changed)
         Gtk.Scrollable.set_vadjustment(self, vadj)
         Gtk.Scrollable.set_hadjustment(self, hadj)
-
-
 
     def __load_thumbnails_bg(self):
         while True:
@@ -401,13 +400,11 @@ class ThumbnailsView(Gtk.Layout):
         else:
             return -1
 
-    def on_set_scroll_adjustments(self, widget, hadjustment, vadjustment):
-        if vadjustment:
-            vadjustment.connect('value-changed',
-                                self.on_adjustment_value_changed)
-
     def on_adjustment_value_changed(self, adj, *args):
-        print('Vscroll: ', adj.get_value())
+        self.visible.y = int(adj.get_value())
+        self.do_scroll()
+
+    def onHAdjustmentValueChanged(self, adj, *args):
         self.do_scroll()
 
     def do_scroll(self):
@@ -423,34 +420,19 @@ class ThumbnailsView(Gtk.Layout):
 
     def update_layout(self, rectangle=None):
         if rectangle is None:
-            #rectangle = self.allocation
             rectangle = self.get_allocation()
-        # print 'updating layout'
-        self.available_width = rectangle.width - 2 * BORDER_SIZE
-        self.cell_width = self.thumbnail_width + 2 * CELL_BORDER_WIDTH
-        self.cell_height = self.thumbnail_height + 2 * CELL_BORDER_WIDTH
-        self.cells_per_row = max(int(self.available_width / self.cell_width), 1)
-        self.cell_width += (self.available_width - self.cells_per_row * self.cell_width) \
-                // self.cells_per_row
 
-        if True:  # display date
-            fontDesc = self.get_style().font_desc
-            pangoContext = self.get_pango_context()
+        self.layoutEngine.updateWidth(rectangle.width)
+        self.layoutEngine.updateCells(len(self.items), self.thumbnail_width, self.thumbnail_height)
+        self.height = self.layoutEngine.getHeight()
 
-            metrics = pangoContext.get_metrics(fontDesc)
-            x = metrics.get_ascent() + metrics.get_descent()
-            self.cell_height += (int(x) + 512) >> 10
+        self.visible.width = rectangle.width
+        self.visible.height = rectangle.height
 
-        self.num_thumbnails = len(self.items)
-        self.num_rows = int(self.num_thumbnails / self.cells_per_row)
-        if self.num_thumbnails % self.cells_per_row:
-            self.num_rows += 1
-
-        self.height = int(self.num_rows * self.cell_height + 2 * BORDER_SIZE)
 
         vadjustment = self.get_vadjustment()
         hadjustment = self.get_hadjustment()
-        vadjustment.step_increment = self.cell_height
+        vadjustment.step_increment = self.thumbnail_height
         vadjustment.connect('value-changed', self.on_adjustment_value_changed)
         x = hadjustment.get_value()
         y = self.height * self.scroll_value
@@ -470,8 +452,6 @@ class ThumbnailsView(Gtk.Layout):
             xchange = (hadjustment.value != x)
             ychange = (vadjustment.value != y)
             self.scroll = False
-
-
 
         if self.get_realized():
             self.get_bin_window().freeze_updates()
@@ -517,7 +497,8 @@ class ThumbnailsView(Gtk.Layout):
         #         context.line_to(j[0], j[1])
         #         context.stroke()
 
-        self.draw_all_cells(area, context)
+        print(self.visible)
+        self.draw_all_cells(self.visible, context)
         context.stroke()
         return False
 
@@ -533,50 +514,15 @@ class ThumbnailsView(Gtk.Layout):
         return x, y
 
     def draw_all_cells(self, area, cr):
-        # print 'draw_all_cells', area.x, area.y, area.width, area.height
-        if self.cell_width == 0 or self.cell_height == 0:
-            return
-
-        start_cell_column = max((area[0] - BORDER_SIZE) // self.cell_width, 0)
-        start_cell_row = max((area[1] - BORDER_SIZE) // self.cell_height, 0)
-        start_cell_num = start_cell_column +  start_cell_row * self.cells_per_row
-
-        start_cell_x, cell_y = self.get_cell_position(start_cell_num)
-
-        end_cell_column = int(max((area[0] + area[2] - BORDER_SIZE) // self.cell_width, 0))
-        end_cell_row = int(max((area[1] + area[3] - BORDER_SIZE) // self.cell_height, 0))
-
-        num_rows = end_cell_row - start_cell_row + 1
-        num_cols = min(end_cell_column - start_cell_column + 1,
-                       self.cells_per_row - start_cell_column)
-
-        i = 0
-        cell_num = start_cell_num
-        while i < num_rows and cell_num < len(self.items):
-            cell_x = start_cell_x
-            j = 0
-            while j < num_cols and cell_num + j < len(self.items):
-                # print '  ',
-                self.draw_cell(cell_num + j, area, cr)
-                cell_x += self.cell_width
-                j += 1
-
-            cell_y += self.cell_height
-            cell_num += self.cells_per_row
-            i += 1
+        cells = self.layoutEngine.getVisibleCells(area)
+        for cellNum, cell in cells.items():
+            cr.rectangle(cell.x - self.visible.x, cell.y - self.visible.y, cell.width, cell.height)
+        cr.stroke()
 
     def cell_bounds(self, cell, cr):
         x, y = self.get_cell_position(cell)
         return [x, y, self.cell_width, self.cell_height]
 
-    def get_text(self, thumbnail_num):
-        return ""
-
-    def is_thumb(self, thumbnail_num):
-        return False
-
-    def get_thumb(self, thumbnail_num):
-        return None
 
     def get_thumbnail_pixbuf(self, thumbnail_num):
         if not self.is_thumb(thumbnail_num):
@@ -597,9 +543,6 @@ class ThumbnailsView(Gtk.Layout):
         return pixbuf
 
     def draw_cell(self, thumbnail_num, area, cr):
-        # print 'drawing cell', thumbnail_num, self.items[thumbnail_num]
-        # ~ filename = self.items[thumbnail_num]
-
         bounds = self.cell_bounds(thumbnail_num, cr)
 
         ins = rectIntersect(bounds, area)
@@ -805,12 +748,10 @@ class ListView(ThumbnailsView):
         if cell_num >= 0:
             if cell_num not in self.selection:
                 self.selection.set([cell_num])
-            print("drop good !!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     def notify_selection_change(self, old):
         """ event selection changed """
         ThumbnailsView.notify_selection_change(self, old)
-        print("select change", self.selection.real_selection)
 
     def getSelected(self):
         return [self.items[i] for i in self.selection.real_selection]
