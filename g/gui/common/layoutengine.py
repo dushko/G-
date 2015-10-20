@@ -77,6 +77,8 @@ class LayoutEngine(object):
         for row in range(startRow, endRow + 1):
             for col in range(startCol, endCol + 1):
                 cellNum = col + row * self.__columns
+                if cellNum >= self.__cellsTotal:
+                    continue
                 cells[cellNum] = self.getCell(row, col)
 
         return cells
