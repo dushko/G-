@@ -35,5 +35,11 @@ class MyTestCase(unittest.TestCase):
         cells = le.getVisibleCells(Rectangle(0, 0, 23, 5))
         self.assertDictEqual(cells, {0: Rectangle(0, 0, 10, 10), 1: Rectangle(10, 0, 10, 10)})
 
+        # test not full layout
+        le.updateCells(3, 10, 20)
+        le.updateWidth(20)
+        cells = le.getVisibleCells(Rectangle(0, 20, 20, 15))
+        self.assertDictEqual(cells, {2: Rectangle(0, 20, 10, 20)})
+
 if __name__ == '__main__':
     unittest.main()
