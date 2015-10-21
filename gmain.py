@@ -16,10 +16,11 @@ def f():
 def gui():
     dbFile = 'config/db.xml'
     dbase = db.DBPhotos(dbFile)
+    dbTags = db.DBTags('config/tags.xml')
     treeDb = db.TreeDB(dbase)
 
     import g.gui.gtk.mainwindow as mw
-    w = mw.MainWindow(treeDb)
+    w = mw.MainWindow(treeDb, dbTags)
 
 
 if __name__ == '__main__':
