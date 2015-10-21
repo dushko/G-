@@ -888,16 +888,30 @@ class DBTags:
 
     def getAllTags(self):
         """ return list of tuples (tag, parent catg)"""
-        l = [(n.text, n.getparent().get("name")) for n in
-             self.root.xpath("//tag")]
-        l.sort(key=lambda x: x[0].lower())
+        tags = self.root.xpath('//tag')
+        names = [tag.get('name') for tag in tags]
+
+        l = [(n.get('name'), n.getparent().get('name')) for n in self.root.xpath("//tag")]
+        l.sort(key=lambda x: '' if x is None else x[0].lower())
         return l
 
     def getTagsTree(self, rootTag=None):
+        root = None
         if rootTag is None:
-            pass
+            root = self.root
         else:
             raise NotImplemented('getTagsTree from subtag not supported')
+
+        def builder(node, tree):
+            for tagNode in node.getchildren():
+                if tagNode.tag == 'tag':
+                    treeChild = tree.addChild(tagNode.get('name'))
+                    builder(tagNode, treeChild)
+
+        resultTree = Tree('root')
+        builder(root, resultTree)
+
+        return resultTree
 
     def save(self):
         fid = open(self.file, "w")
@@ -1127,9 +1141,9 @@ class Tree(object):
     def addChildren(self, children):
         self.children.extend(children)
 
-    def print(self):
+    def print(self, space=2):
         def dfs(tree, depth):
-            print('  '*depth + tree.name)
+            print(' '*space*depth + tree.name)
             for c in tree.children:
                 dfs(c, depth + 1)
         dfs(self, 0)
