@@ -886,15 +886,6 @@ class DBTags:
             self.root = Element("tags")
         self.file = file
 
-    def getAllTags(self):
-        """ return list of tuples (tag, parent catg)"""
-        tags = self.root.xpath('//tag')
-        names = [tag.get('name') for tag in tags]
-
-        l = [(n.get('name'), n.getparent().get('name')) for n in self.root.xpath("//tag")]
-        l.sort(key=lambda x: '' if x is None else x[0].lower())
-        return l
-
     def getTagsTree(self, rootTag=None):
         root = None
         if rootTag is None:
