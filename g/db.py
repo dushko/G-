@@ -887,6 +887,12 @@ class DBTags:
         self.file = file
 
     def getTagsTree(self, rootTag=None):
+        """
+        Returns hierarchical representation of tags from given root node.
+
+        :param rootTag: root of tree to build
+        :return: Tree struct with all tags
+        """
         root = None
         if rootTag is None:
             root = self.root
