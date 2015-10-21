@@ -21,6 +21,7 @@ class MainWindow:
         self.mainPane = builder.get_object('mainPane')
         self.mainPane.pack2(self.thumbsView, True, True)
 
+        window.connect('delete-event', Gtk.main_quit)
         window.show_all()
         self.initGui()
 
