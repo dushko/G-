@@ -15,7 +15,6 @@
 from lxml.etree import Element, ElementTree
 import gc
 
-
 from g.common import cd2d
 from g.tools import PhotoCmd, supportedFormats
 import os
@@ -23,9 +22,7 @@ import shutil
 import stat
 import os.path
 
-
 from subprocess import Popen, PIPE
-import g.char_utils
 
 
 def walktree(top=".", depthfirst=True):
@@ -62,8 +59,6 @@ class ImportError(Exception):
 
 
 class DBPhotos:
-    """
-    """
     normalizeName = False
     autorotAtImport = False
 
@@ -71,42 +66,39 @@ class DBPhotos:
         if os.path.isfile(file):
             self.root = ElementTree(file=file).getroot()
         else:
+            print('Cannot opet file %s', file)
             self.root = Element("db")
         self.file = file
 
-        #==== simple basket convertion (without verification)
-        # theses lines could be deleted in the future
-        try:
-            nodeB = self.root.xpath("/db/basket")[0]
-        except:
-            nodeB = None
+    def getAlbumTree(self, rootAlbum=None):
+        if rootAlbum is None:
+            dbTree = TreeDB(self)
+            return dbTree.tree
+        else:
+            raise NotImplemented('getAlbumTree not implemented for subalbums')
 
-        if nodeB:
-            # FIXME unused var ln = nodeB.xpath("""/db/basket/p""")
-            nodeB.getparent().remove(nodeB)  # adios old basket !
-        #==== simple basket convertion (without verification)
-
-    def setNormalizeName(self, v):
+    @staticmethod
+    def setNormalizeName(v):
         assert v in (True, False)
         DBPhotos.normalizeName = v
 
-    def setNormalizeNameFormat(self, v):
-        assert isinstance(v, basestring)
+    @staticmethod
+    def setNormalizeNameFormat( v):
+        assert isinstance(v, str)
         PhotoCmd.setNormalizeNameFormat(v)
 
-    def setAutorotAtImport(self, v):
+    @staticmethod
+    def setAutorotAtImport(v):
         assert v in (True, False)
         DBPhotos.autorotAtImport = v
 
     def add(self, path, tags={}):
-
         assert type(path) == str
         assert os.path.isdir(path)
+
         path = os.path.normpath(path)
-
         importErrors = {}
-
-        ln = self.root.xpath(u"""//folder[@name="%s"]""" % path)
+        ln = self.root.xpath('//folder[@name="%s"]' % path)
         assert len(ln) <= 1
         if ln:
             nodeFolder = ln[0]
@@ -157,11 +149,6 @@ class DBPhotos:
         for (file, nodeDir) in files:
             yield i
             i += 1
-            #OLD TOOLS:
-            #file = PhotoCmd.prepareFile(file,
-            #                needRename=DBPhotos.normalizeName,
-            #                needAutoRot=DBPhotos.autorotAtImport,
-            #                )
             m = self.__addPhoto(nodeDir, file, tags, filesInBasket)
             if m:
                 importErrors[file] = m
@@ -247,6 +234,10 @@ class DBPhotos:
         else:
             return []
 
+    def query(self, xpath):
+        ln = self.root.xpath(xpath)
+        return ln
+
     def toXml(self):
         """ for tests only """
         from io import StringIO
@@ -262,21 +253,6 @@ class DBPhotos:
         ElementTree(self.root).write(fid)
         fid.close()
 
-        # save a "simple txt file" of basket'files near db.xml
-        # (could be used in another prog ?)
-        file = os.path.join(os.path.dirname(self.file), "basket.txt")
-        if self.isBasket():
-            list = [i.file for i in self.getBasket()]
-
-            fid = open(file, "w")
-            if fid:
-                fid.write((u"\n".join(list)).encode("utf_8"))
-                fid.close()
-        else:
-            try:
-                os.unlink(file)
-            except:
-                pass
 
 class FolderNode(object):
     """ A folder node containing photo nodes"""
@@ -914,13 +890,19 @@ class DBTags:
         """ return list of tuples (tag, parent catg)"""
         l = [(n.text, n.getparent().get("name")) for n in
              self.root.xpath("//tag")]
-        l.sort(cmp=lambda x, y: cmp(x[0].lower(), y[0].lower()))
+        l.sort(key=lambda x: x[0].lower())
         return l
+
+    def getTagsTree(self, rootTag=None):
+        if rootTag is None:
+            pass
+        else:
+            raise NotImplemented('getTagsTree from subtag not supported')
 
     def save(self):
         fid = open(self.file, "w")
         fid.write("""<?xml version="1.0" encoding="UTF-8"?>""")
-        ElementTree(self.root).write(fid, encoding="utf-8")
+        ElementTree(self.root).write(fid, encoding="utf-8", prett_print=True)
         fid.close()
 
     def getRootTag(self):
@@ -1071,7 +1053,6 @@ class TreeDB(object):
         root = self.db.getRootFolder()
 
         self.zapfill(root, None)
-        self.tree.print()
 
     def zapfill(self, node, attach):
         """
@@ -1155,3 +1136,42 @@ class Tree(object):
 
     def __str__(self):
         return "Tree['%s']" % self.name
+
+class Thumb(object):
+    def __init__(self, thumbId : int, data : bytearray):
+        self.id = thumbId
+        self.data = data
+
+    @staticmethod
+    def fromImageFile(path):
+        pass
+
+
+class DBThumbs(object):
+    def getByHash(self, hash):
+        raise NotImplementedError()
+    def getByFilePath(self, path):
+        raise NotImplementedError()
+    def getById(self, id):
+        raise NotImplementedError()
+
+    def removeByHash(self, hash):
+        raise NotImplementedError()
+    def removeByFilePath(self, path):
+        raise NotImplementedError()
+    def removeById(self, id):
+        raise NotImplementedError()
+
+class DbThumbsFile(DBThumbs):
+    def __init__(self, path):
+        self.path = path
+
+    def getByHash(self, thumbHash):
+        subDir = thumbHash[:2]
+        fname = os.path.join(self.path, subDir, thumbHash[2:])
+        if os.path.exists(fname):
+            with open(fname, 'rb') as f:
+                data = f.readall()
+                return Thumb(0, data)
+        else:
+            return None
