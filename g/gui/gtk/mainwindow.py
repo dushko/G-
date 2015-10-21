@@ -18,7 +18,6 @@ class MainWindow:
 
         self.albumTree = builder.get_object('albumTree')
         self.tagTree = builder.get_object('tagTree')
-        ''' :type : Gtk.Paned '''
         self.mainPane = builder.get_object('mainPane')
         self.mainPane.pack2(self.thumbsView, True, True)
 
@@ -28,8 +27,8 @@ class MainWindow:
         Gtk.main()
 
     def _fillStore(self, store : Gtk.TreeStore, tree, icon : GdkPixbuf.Pixbuf):
-        def helper(iter, tr):
-            it = store.append(iter, [icon, tr.name])
+        def helper(storeIter, tr):
+            it = store.append(storeIter, [icon, tr.name])
             for child in tr.children:
                 helper(it, child)
 
@@ -42,8 +41,16 @@ class MainWindow:
         self.updateTreeWidget(self.tagTree, self.tagDb.getTagsTree(), folderIcon)
 
     def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.db.Tree, icon : GdkPixbuf.Pixbuf):
+        def fillStore(st : Gtk.TreeStore, treeStruct, ico : GdkPixbuf.Pixbuf):
+            def helper(storeIter, tr):
+                it = st.append(storeIter, [ico, tr.name])
+                for child in tr.children:
+                    helper(it, child)
+
+            helper(None, treeStruct)
+
         store = Gtk.TreeStore(GdkPixbuf.Pixbuf, str)
-        self._fillStore(store, tree, icon)
+        fillStore(store, tree, icon)
         widget.set_model(store)
 
         rendererName = Gtk.CellRendererText()
