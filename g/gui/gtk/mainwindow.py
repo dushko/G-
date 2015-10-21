@@ -1,17 +1,19 @@
 from gi.repository import Gtk
 from gi.repository import GdkPixbuf
 
-class MainWindow:
-    def __init__(self, treeDb):
-        self.treeDb = treeDb
+import g.db
 
+class MainWindow:
+    def __init__(self, treeDb : g.db.TreeDB, tagDb : g.db.DBTags):
+        self.treeDb = treeDb
+        self.tagDb = tagDb
 
         builder = Gtk.Builder()
         builder.add_from_file("data/MainWindow.glade")
         window = builder.get_object('MainWindow')
 
-
         self.albumTree = builder.get_object('albumTree')
+        self.tagTree = builder.get_object('tagTree')
 
         window.show_all()
         self.initGui()
@@ -29,18 +31,20 @@ class MainWindow:
     def initGui(self):
         folderIcon = GdkPixbuf.Pixbuf.new_from_file('data/img/folder.png')
 
+        self.updateTreeWidget(self.albumTree, self.treeDb.tree, folderIcon)
+        self.updateTreeWidget(self.tagTree, self.tagDb.getTagsTree(), folderIcon)
+
+    def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.db.Tree, icon : GdkPixbuf.Pixbuf):
         store = Gtk.TreeStore(GdkPixbuf.Pixbuf, str)
-        self._fillStore(store, self.treeDb.tree, folderIcon)
-        self.albumTree.set_model(store)
+        self._fillStore(store, tree, icon)
+        widget.set_model(store)
 
         rendererName = Gtk.CellRendererText()
         rendererIcon = Gtk.CellRendererPixbuf()
 
         columnIcon = Gtk.TreeViewColumn('Icon', rendererIcon)
         columnIcon.add_attribute(rendererIcon, 'pixbuf', 0)
-        columnName = Gtk.TreeViewColumn("Name", rendererName, text=1)
+        columnName = Gtk.TreeViewColumn('Name', rendererName, text=1)
 
-        self.albumTree.append_column(columnIcon)
-        self.albumTree.append_column(columnName)
-
-
+        widget.append_column(columnIcon)
+        widget.append_column(columnName)
