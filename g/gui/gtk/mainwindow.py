@@ -2,6 +2,7 @@ from gi.repository import Gtk
 from gi.repository import GdkPixbuf
 
 import g.db
+from g.gui.gtk.listview import ListView
 
 class MainWindow:
     def __init__(self, treeDb : g.db.TreeDB, tagDb : g.db.DBTags):
@@ -12,8 +13,14 @@ class MainWindow:
         builder.add_from_file("data/MainWindow.glade")
         window = builder.get_object('MainWindow')
 
+
+        self.thumbsView = ListView()
+
         self.albumTree = builder.get_object('albumTree')
         self.tagTree = builder.get_object('tagTree')
+        ''' :type : Gtk.Paned '''
+        self.mainPane = builder.get_object('mainPane')
+        self.mainPane.pack2(self.thumbsView, True, True)
 
         window.show_all()
         self.initGui()
