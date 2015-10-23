@@ -1,4 +1,4 @@
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 from gi.repository import GdkPixbuf
 
 import g.db
@@ -11,21 +11,53 @@ class MainWindow:
 
         builder = Gtk.Builder()
         builder.add_from_file("data/MainWindow.glade")
-        window = builder.get_object('MainWindow')
 
+        window = builder.get_object('MainWindow')
 
         self.thumbsView = ListView()
 
-        self.albumTree = builder.get_object('albumTree')
-        self.tagTree = builder.get_object('tagTree')
-        self.mainPane = builder.get_object('mainPane')
-        self.mainPane.pack2(self.thumbsView, True, True)
+        self.treeAlbums = builder.get_object('treeAlbums')
+        self.treeTags = builder.get_object('treeTags')
+        self.subMainPane = builder.get_object('subMainPane')
+        self.subMainPane.pack1(self.thumbsView, True, True)
+
+        self.leftStack = builder.get_object('leftStack')
+
+
+        self.toolAlbumsEventBox = builder.get_object('toolAlbumsEventBox')
+        self.toolAlbumsFrame = builder.get_object('toolAlbumsFrame')
+        self.toolAlbumsLabel = builder.get_object('labelAlbums')
+        self.toolAlbumsIcon = builder.get_object('iconAlbums')
+
+        # self.toolTagsEventBox = builder.get_object('toolTagsEventBox')
+        # self.toolTagsFrame = builder.get_object('toolTagsFrame')
+
+        self.toolAlbumsEventBox.connect('button-press-event', self.onToolAlbumsPress)
+
+        self.iconTags = builder.get_object('iconTags')
+        self.labelTags = builder.get_object('labelTags')
 
         window.connect('delete-event', Gtk.main_quit)
-        window.show_all()
+        window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        window.show()
         self.initGui()
 
         Gtk.main()
+
+    def onToolAlbumsPress(self, widget : Gtk.Widget, event, *data):
+
+        if self.toolAlbumsLabel.is_visible():
+            self.toolAlbumsLabel.set_visible(False)
+            self.toolAlbumsFrame.set_shadow_type(Gtk.ShadowType.NONE)
+            self.leftStack.set_visible(False)
+        else:
+            self.toolAlbumsLabel.set_visible(True)
+            self.toolAlbumsFrame.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+            self.leftStack.set_visible(True)
+            n = self.leftStack.page_num(self.treeAlbums)
+            self.leftStack.set_current_page(n)
+            self.leftStack.set_visible(True)
+
 
     def _fillStore(self, store : Gtk.TreeStore, tree, icon : GdkPixbuf.Pixbuf):
         def helper(storeIter, tr):
@@ -38,8 +70,8 @@ class MainWindow:
     def initGui(self):
         folderIcon = GdkPixbuf.Pixbuf.new_from_file('data/img/folder.png')
 
-        self.updateTreeWidget(self.albumTree, self.treeDb.tree, folderIcon)
-        self.updateTreeWidget(self.tagTree, self.tagDb.getTagsTree(), folderIcon)
+        self.updateTreeWidget(self.treeAlbums, self.treeDb.tree, folderIcon)
+        self.updateTreeWidget(self.treeTags, self.tagDb.getTagsTree(), folderIcon)
 
     def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.db.Tree, icon : GdkPixbuf.Pixbuf):
         def fillStore(st : Gtk.TreeStore, treeStruct, ico : GdkPixbuf.Pixbuf):
