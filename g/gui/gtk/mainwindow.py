@@ -2,6 +2,7 @@ from gi.repository import Gtk, Gdk
 from gi.repository import GdkPixbuf
 
 import g.db
+from g.gui.gtk.gtoolbar import GToolBar, GToolButton
 from g.gui.gtk.listview import ListView
 
 class MainWindow:
@@ -16,48 +17,59 @@ class MainWindow:
 
         self.thumbsView = ListView()
 
+        self.treeAlbumsLayout = builder.get_object('treeAlbumsLayout')
+        self.treeTagsLayout = builder.get_object('treeTagsLayout')
         self.treeAlbums = builder.get_object('treeAlbums')
         self.treeTags = builder.get_object('treeTags')
+        self.mainPane = builder.get_object('mainPane')
         self.subMainPane = builder.get_object('subMainPane')
         self.subMainPane.pack1(self.thumbsView, True, True)
 
         self.leftStack = builder.get_object('leftStack')
-
-
-        self.toolAlbumsEventBox = builder.get_object('toolAlbumsEventBox')
-        self.toolAlbumsFrame = builder.get_object('toolAlbumsFrame')
-        self.toolAlbumsLabel = builder.get_object('labelAlbums')
-        self.toolAlbumsIcon = builder.get_object('iconAlbums')
-
-        # self.toolTagsEventBox = builder.get_object('toolTagsEventBox')
-        # self.toolTagsFrame = builder.get_object('toolTagsFrame')
-
-        self.toolAlbumsEventBox.connect('button-press-event', self.onToolAlbumsPress)
+        self.leftStack.set_visible(False)
 
         self.iconTags = builder.get_object('iconTags')
         self.labelTags = builder.get_object('labelTags')
+        self.mainBoxLayout = builder.get_object('mainBoxLayout')
+
+
+        buttons = [GToolButton('properties', 'Properties', 'image'),
+                GToolButton('metadata', 'Metadata', 'battery'),
+                GToolButton('geolocation', 'Geolocation', 'dialog-information')]
+        leftToolbarButtons = [GToolButton('albums', 'Albums', 'image'),
+                GToolButton('tags', 'Tags', 'accessories-text-editor')]
+
+        self.rightToolBar = GToolBar(buttons)
+        self.leftToolBar = GToolBar(leftToolbarButtons)
+
+        self.mainBoxLayout.pack_start(self.rightToolBar, False, False, 0)
+        self.mainBoxLayout.pack_start(self.leftToolBar, False, False, 0)
+        self.mainBoxLayout.reorder_child(self.leftToolBar, 0)
+        self.mainBoxLayout.reorder_child(self.mainPane, 1)
+        self.mainBoxLayout.reorder_child(self.rightToolBar, 2)
+        self.leftToolBar.connect('selection-changed', self.onLeftToolBarChanged)
+        self.rightToolBar.connect('selection-changed', self.onRightToolBarChanged)
 
         window.connect('delete-event', Gtk.main_quit)
         window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         window.show()
         self.initGui()
-
         Gtk.main()
 
-    def onToolAlbumsPress(self, widget : Gtk.Widget, event, *data):
+    def onRightToolBarChanged(self, _, buttonId):
+        print('Right toolbar changed ', buttonId)
 
-        if self.toolAlbumsLabel.is_visible():
-            self.toolAlbumsLabel.set_visible(False)
-            self.toolAlbumsFrame.set_shadow_type(Gtk.ShadowType.NONE)
-            self.leftStack.set_visible(False)
+    def onLeftToolBarChanged(self, _, buttonId):
+        if buttonId is not None:
+            self.leftStack.set_visible(True)
+            if buttonId == 'albums':
+                n = self.leftStack.page_num(self.treeAlbumsLayout)
+                self.leftStack.set_current_page(n)
+            elif buttonId == 'tags':
+                n = self.leftStack.page_num(self.treeTagsLayout)
+                self.leftStack.set_current_page(n)
         else:
-            self.toolAlbumsLabel.set_visible(True)
-            self.toolAlbumsFrame.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
-            self.leftStack.set_visible(True)
-            n = self.leftStack.page_num(self.treeAlbums)
-            self.leftStack.set_current_page(n)
-            self.leftStack.set_visible(True)
-
+            self.leftStack.set_visible(False)
 
     def _fillStore(self, store : Gtk.TreeStore, tree, icon : GdkPixbuf.Pixbuf):
         def helper(storeIter, tr):
