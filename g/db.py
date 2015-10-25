@@ -483,64 +483,6 @@ class PhotoNode(object):
         assert node.tag == "photo"
         self.__node = node
 
-    def __getName(self):
-        return self.__node.attrib["name"]
-    name = property(__getName)
-
-    def __getfolderName(self):
-        return os.path.basename(self.folder)
-    folderName = property(__getfolderName)
-
-    def __getIsReadOnly(self):
-        return not os.access(self.file, os.W_OK)
-    isReadOnly = property(__getIsReadOnly)
-
-    def __getTags(self):
-        l = [dec(i.text) for i in self.__node.xpath("t")]
-        l.sort()
-        return l
-    tags = property(__getTags)
-
-    def __getComment(self):
-        ln = self.__node.xpath("c")
-        if ln:
-            return dec(ln[0].text)
-        else:
-            return ""
-    comment = property(__getComment)
-
-    def __getRating(self):  # 0x4746 18246 IFD0 Exif.Image.Rating Short
-            ln = self.__node.xpath("r")  # saved decimal like <r>5</r>
-            if ln:
-                return int(ln[0].text)
-            else:
-                return 0
-    rating = property(__getRating)
-
-    # if exif -> exifdate else filedate
-    def __getDate(self):
-        return self.__node.attrib["date"]
-    date = property(__getDate)
-
-    def __getResolution(self):
-        return self.__node.attrib["resolution"]
-    resolution = property(__getResolution)
-
-    # if exifdate -> true else false
-    def __getReal(self):
-        return self.__node.attrib["real"]
-    real = property(__getReal)
-
-    def __getFolder(self):
-        na = dec(self.__node.getparent().attrib["name"])
-        assert type(na) == str
-        return na
-    folder = property(__getFolder)
-
-    def __getFile(self):
-        return dec(os.path.join(self.__getFolder(), self.__getName()))
-    file = property(__getFile)
-
     def getParent(self):
         return FolderNode(self.__node.getparent())
 
@@ -853,6 +795,65 @@ class PhotoNode(object):
             return True
 
         return False
+
+    def __getName(self):
+        return self.__node.attrib["name"]
+    name = property(__getName)
+
+    def __getfolderName(self):
+        return os.path.basename(self.folder)
+    folderName = property(__getfolderName)
+
+    def __getIsReadOnly(self):
+        return not os.access(self.file, os.W_OK)
+    isReadOnly = property(__getIsReadOnly)
+
+    def __getTags(self):
+        l = [dec(i.text) for i in self.__node.xpath("t")]
+        l.sort()
+        return l
+    tags = property(__getTags)
+
+    def __getComment(self):
+        ln = self.__node.xpath("c")
+        if ln:
+            return dec(ln[0].text)
+        else:
+            return ""
+    comment = property(__getComment)
+
+    def __getRating(self):  # 0x4746 18246 IFD0 Exif.Image.Rating Short
+            ln = self.__node.xpath("r")  # saved decimal like <r>5</r>
+            if ln:
+                return int(ln[0].text)
+            else:
+                return 0
+    rating = property(__getRating)
+
+    # if exif -> exifdate else filedate
+    def __getDate(self):
+        return self.__node.attrib["date"]
+    date = property(__getDate)
+
+    def __getResolution(self):
+        return self.__node.attrib["resolution"]
+    resolution = property(__getResolution)
+
+    # if exifdate -> true else false
+    def __getReal(self):
+        return self.__node.attrib["real"]
+    real = property(__getReal)
+
+    def __getFolder(self):
+        na = dec(self.__node.getparent().attrib["name"])
+        assert type(na) == str
+        return na
+    folder = property(__getFolder)
+
+    def __getFile(self):
+        return dec(os.path.join(self.__getFolder(), self.__getName()))
+    file = property(__getFile)
+
 
 
 # =============================================================================
