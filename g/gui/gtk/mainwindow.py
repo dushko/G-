@@ -6,9 +6,11 @@ from g.gui.gtk.gtoolbar import GToolBar, GToolButton
 from g.gui.gtk.listview import ListView
 
 class MainWindow:
-    def __init__(self, treeDb : g.db.TreeDB, tagDb : g.db.DBTags):
+    def __init__(self, treeDb : g.db.TreeDB, tagDb : g.db.DBTags,
+                photoDb : g.db.DBPhotos):
         self.treeDb = treeDb
         self.tagDb = tagDb
+        self.photoDb = photoDb
 
         builder = Gtk.Builder()
         builder.add_from_file("data/MainWindow.glade")
@@ -50,11 +52,19 @@ class MainWindow:
         self.leftToolBar.connect('selection-changed', self.onLeftToolBarChanged)
         self.rightToolBar.connect('selection-changed', self.onRightToolBarChanged)
 
+        self.treeAlbums.connect('row-activated', self.onAlbumRowActivation)
+
         window.connect('delete-event', Gtk.main_quit)
         window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         window.show()
         self.initGui()
         Gtk.main()
+
+    def onAlbumRowActivation(self, widget : Gtk.TreeView, p1, column : Gtk.TreeViewColumn):
+        treeSelection = widget.get_selection()
+        model, iter0 = treeSelection.get_selected()
+        albumPath = model.get_value(iter0, 2)
+        photos = self.photoDb.getPhotosByPath(albumPath)
 
     def onRightToolBarChanged(self, _, buttonId):
         print('Right toolbar changed ', buttonId)
@@ -88,13 +98,14 @@ class MainWindow:
     def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.db.Tree, icon : GdkPixbuf.Pixbuf):
         def fillStore(st : Gtk.TreeStore, treeStruct, ico : GdkPixbuf.Pixbuf):
             def helper(storeIter, tr):
-                it = st.append(storeIter, [ico, tr.name])
+                p = tr.getFullPath()
+                it = st.append(storeIter, [ico, tr.name, p])
                 for child in tr.children:
                     helper(it, child)
 
             helper(None, treeStruct)
 
-        store = Gtk.TreeStore(GdkPixbuf.Pixbuf, str)
+        store = Gtk.TreeStore(GdkPixbuf.Pixbuf, str, str)
         fillStore(store, tree, icon)
         widget.set_model(store)
 
