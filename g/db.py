@@ -15,6 +15,7 @@
 from lxml.etree import Element, ElementTree
 import gc
 
+from g.commongtk import Buffer
 from g.common import cd2d
 from g.tools import PhotoCmd, supportedFormats
 import os
