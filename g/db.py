@@ -544,22 +544,6 @@ class PhotoNode(object):
     def getParent(self):
         return FolderNode(self.__node.getparent())
 
-    def __getIsInBasket(self):
-        return (self.__node.get("basket") == "1")
-    isInBasket = property(__getIsInBasket)
-
-    def addToBasket(self):
-        self.__node.set("basket", "1")
-
-    def removeFromBasket(self):
-        if self.isInBasket:
-            del(self.__node.attrib["basket"])
-
-    #~ def __eq__(self, p):
-        #~ assert p.__class__ == PhotoNode
-        #~ return self.file == p.file
-    # throw a bug in lxml ?!?! ;-(
-
     def getThumb(self):
         """ Get thumb from exif data"""
         if self.real == "yes":  # real photo (exifdate !)
@@ -798,19 +782,9 @@ class PhotoNode(object):
         """
         assert pc.__class__ == PhotoCmd
 
-        wasInBasket = self.isInBasket
-
         self.__node.clear()
         self.__node.attrib["name"] = os.path.basename(pc.file)
         self.__node.attrib["resolution"] = pc.resolution
-
-        # OLD PhotoCmd
-        #~ if pc.exifdate:
-            #~ self.__node.attrib["date"]=pc.exifdate
-            #~ self.__node.attrib["real"]="yes"
-        #~ else:
-            #~ self.__node.attrib["date"]=pc.filedate
-            #~ self.__node.attrib["real"]="no"
 
         # NEW PhotoCmd (always a exifdate)
         self.__node.attrib["date"] = pc.exifdate
@@ -838,9 +812,6 @@ class PhotoNode(object):
             nodeRating = Element("r")
             nodeRating.text = str(pc.rating)
             self.__node.append(nodeRating)
-
-        if wasInBasket:
-            self.addToBasket()
 
         return pc.tags
 
