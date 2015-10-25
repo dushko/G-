@@ -370,7 +370,7 @@ class FolderNode(object):
             self.__node.attrib["expand"] = "0"
 
     def rename(self, newname):
-        assert type(newname) == unicode
+        assert type(newname) == str
         oldname = self.file
         newname = os.path.join(os.path.dirname(oldname), newname)
         if not (os.path.isdir(newname) or os.path.isfile(newname)):
@@ -1010,7 +1010,8 @@ class CatgNode(object):
         return l
 
     def addTag(self, t):
-        assert type(t) == unicode
+        assert type(t) == str
+
         if self.isUnique("tag", t):
             n = Element("tag")
             n.text = t
@@ -1062,8 +1063,8 @@ class TreeDB(object):
 
     def init(self):
         root = self.db.getRootFolder()
-
-        self.zapfill(root, None)
+        path = []
+        self.zapfill(root, path)
 
     def zapfill(self, node, attach):
         """
@@ -1075,10 +1076,13 @@ class TreeDB(object):
             photos = node.getPhotos()
             # zap the useless folders
             if len(folders) == 1 and len(photos) == 0:
+                attach.append(node.name)
                 return self.zapfill(folders[0], attach)
             else:
                 if self.tree is None:
-                    self.tree = Tree(node.name)
+                    rootPath = '/'.join(attach)
+                    tree = Tree(rootPath)
+                    self.tree = tree.addChild(node.name)
 
                 return self.fill(node, self.tree)
 
@@ -1126,7 +1130,11 @@ class TreeDB(object):
 
 class Tree(object):
     def __init__(self, name, parent=None):
-        self.parent = None
+        assert(type(parent) != str)
+        if type(parent) == str:
+            pass
+
+        self.parent = parent
         self.children = []
         self.name = name
 
@@ -1144,6 +1152,14 @@ class Tree(object):
             for c in tree.children:
                 dfs(c, depth + 1)
         dfs(self, 0)
+
+    def getFullPath(self):
+        path = [self.name]
+        p = self.parent
+        while p is not None:
+            path.insert(0, p.name)
+            p = p.parent
+        return '/'.join(path)
 
     def __str__(self):
         return "Tree['%s']" % self.name
