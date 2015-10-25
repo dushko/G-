@@ -70,6 +70,14 @@ class DBPhotos:
             self.root = Element("db")
         self.file = file
 
+    def getPhotosByPath(self, path):
+        path = os.path.normpath(path)
+
+        node = self.root.xpath('//folder[@name="%s"]' % (path, ))
+        photos = node[0].xpath('photo')
+        photoNodes = [PhotoNode(p) for p in photos]
+        return photoNodes
+
     def getAlbumTree(self, rootAlbum=None):
         if rootAlbum is None:
             dbTree = TreeDB(self)
