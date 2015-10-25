@@ -20,7 +20,7 @@ def gui():
     treeDb = db.TreeDB(dbase)
 
     import g.gui.gtk.mainwindow as mw
-    w = mw.MainWindow(treeDb, dbTags)
+    w = mw.MainWindow(treeDb, dbTags, dbase)
 
 
 if __name__ == '__main__':
