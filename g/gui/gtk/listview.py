@@ -147,8 +147,9 @@ class ThumbnailsView(Gtk.Layout):
     def __init__(self):
         Gtk.Layout.__init__(self)
 
+        self.thumbCache = {}
         self.layoutEngine = LayoutEngine()
-        self.loading_pixbuf = GdkPixbuf.Pixbuf.new_from_file('../../../data/gfx/refresh.png')
+        self.loading_pixbuf = GdkPixbuf.Pixbuf.new_from_file('data/gfx/refresh.png')
         self.selection = selection
         self.thumbnail_pixbufs = {}
         self.exif_tags = {}
@@ -516,8 +517,27 @@ class ThumbnailsView(Gtk.Layout):
     def draw_all_cells(self, area, cr):
         cells = self.layoutEngine.getVisibleCells(area)
         for cellNum, cell in cells.items():
-            cr.rectangle(cell.x - self.visible.x, cell.y - self.visible.y, cell.width, cell.height)
+            self.drawCell(cr, cell, cellNum)
+
+    def drawCell(self, cr, cell, cellNum):
+        img = self.items[cellNum]
+        fname = img.file
+        thumb = self.thumbCache.get(fname)
+        print('draw thumb: ', fname )
+        if not thumb:
+            thumb = GdkPixbuf.Pixbuf.new_from_file(fname)
+            thumb = thumb.scale_simple(self.thumbnail_width, self.thumbnail_height,
+                    GdkPixbuf.InterpType.BILINEAR)
+            self.thumbCache[fname] = thumb
+        x = cell.x - self.visible.x
+        y = cell.y - self.visible.y
+        Gdk.cairo_set_source_pixbuf(cr, thumb, x, y)
+        cr.paint()
         cr.stroke()
+
+        # cr.rectangle(cell.x - self.visible.x, cell.y - self.visible.y, cell.width, cell.height)
+        # self.get_thumbnail_pixbuf(cellNum)
+        # cr.stroke()
 
     def cell_bounds(self, cell, cr):
         x, y = self.get_cell_position(cell)
@@ -538,7 +558,6 @@ class ThumbnailsView(Gtk.Layout):
                 r = float(pixbuf.get_height()) / self.thumbnail_height
                 wx, wy = int(pixbuf.get_width() / r), self.thumbnail_height
             # ~ pixbuf = pixbuf.scale_simple(wx, wy, gtk.gdk.INTERP_BILINEAR)
-            # speedest
             pixbuf = pixbuf.scale_simple(wx, wy, gtk.gdk.INTERP_NEAREST)
         return pixbuf
 
