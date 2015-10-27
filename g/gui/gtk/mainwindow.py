@@ -6,8 +6,7 @@ from g.gui.gtk.gtoolbar import GToolBar, GToolButton
 from g.gui.gtk.listview import ListView
 
 class MainWindow:
-    def __init__(self, treeDb : g.db.TreeDB, tagDb : g.db.DBTags,
-                photoDb : g.db.DBPhotos):
+    def __init__(self, treeDb : g.db.TreeDB, photoDb : g.db.DBPhotos, tagDb : g.db.DBTags):
         self.treeDb = treeDb
         self.tagDb = tagDb
         self.photoDb = photoDb
@@ -25,7 +24,11 @@ class MainWindow:
         self.treeTags = builder.get_object('treeTags')
         self.mainPane = builder.get_object('mainPane')
         self.subMainPane = builder.get_object('subMainPane')
-        self.subMainPane.pack1(self.thumbsView, True, True)
+        self.subMainPane.pack1(self.thumbsView, True, False)
+        self.thumbsView.show()
+        self.thumbsView.get_resize_mode()
+        self.thumbsView.grab_focus()
+
 
         self.leftStack = builder.get_object('leftStack')
         self.leftStack.set_visible(False)
@@ -65,6 +68,7 @@ class MainWindow:
         model, iter0 = treeSelection.get_selected()
         albumPath = model.get_value(iter0, 2)
         photos = self.photoDb.getPhotosByPath(albumPath)
+        self.thumbsView.set_photos(photos)
 
     def onRightToolBarChanged(self, _, buttonId):
         print('Right toolbar changed ', buttonId)
@@ -118,3 +122,7 @@ class MainWindow:
 
         widget.append_column(columnIcon)
         widget.append_column(columnName)
+
+    @staticmethod
+    def start(dbPhotos, dbAlbums, dbTags):
+        mw = MainWindow(dbAlbums, dbPhotos, dbTags)

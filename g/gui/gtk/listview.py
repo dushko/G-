@@ -8,19 +8,13 @@ changelog:
 """
 import sys
 
-from gi.repository import Gtk
-from gi.repository import GObject
-from gi.repository import Pango
-from gi.repository import GdkPixbuf
-from gi.repository import Gdk
-from gi.repository import cairo
+from gi.repository import Gtk, GObject, Pango, GdkPixbuf, Gdk
 
 from g.gui.common.rectangle import Rectangle
 from g.gui.common.layoutengine import LayoutEngine
 
 import time
 import os
-from orca.guilabels import CARET_NAVIGATION_GRAB_FOCUS
 
 BORDER_SIZE = 2
 CELL_BORDER_WIDTH = 4
@@ -159,10 +153,7 @@ class ThumbnailsView(Gtk.Layout):
         self.visible = Rectangle(0, 0, 1, 1)
 
         self.connect('draw', self.on_draw_event)
-        self.connect('size-allocate', self.on_size_allocate)
-        #self.connect('scroll-child', self.on_set_scroll_adjustments)
         self.connect('key-press-event', self.on_key_press)
-        self.connect('button-press-event', self.on_button_press)
         self.set_can_focus(True)
 
         self.items = []
@@ -187,6 +178,41 @@ class ThumbnailsView(Gtk.Layout):
             time.sleep(0.01)
             yield True
 
+    def get_thumb(self, idx):
+        """ create a PixBuf containing the image's thumb and flags images
+        (basket, read-only, raw) the image's full path is used as buffer's key
+        """
+        node = self.items[idx]
+        if not self.is_thumb(idx):
+            Buffer.images[node.file] = node.getThumb()
+        pb = Buffer.images[node.file]
+        pb2 = 0
+
+        if node.isInBasket:
+            if pb2 == 0:
+                pb2 = pb.copy()
+            Buffer.pbBasket.copy_area(0, 0, 15, 13, pb2, 7, 7)
+
+        if node.isReadOnly:
+            if pb2 == 0:
+                pb2 = pb.copy()
+            wx = pb.get_width()
+            Buffer.pbReadOnly.copy_area(0, 0, 15, 13, pb2, wx - 22, 7)
+
+        if node.rating:
+            if pb2 == 0:
+                pb2 = pb.copy()
+            i = 0
+            while i < node.rating:
+                Buffer.pbReadOnly.copy_area(5, 4, 5, 5, pb2, 25 + 7 * i, 11)
+                i += 1
+
+        if pb2 != 0:
+            pb = pb2
+
+        return pb
+
+
     def stop(self):
         """ stop background process which load thumbs """
         if self.hdl:
@@ -208,23 +234,10 @@ class ThumbnailsView(Gtk.Layout):
         # ~ self.sort_photos(photos)
         self.update_layout()
         self.selection.empty()
-        self.set_focus_cell(0)
 
         self.priority_loads = []
 
         self.start()
-        self.invalidate_view()
-
-    def invalidate_view(self):
-        if self.get_bin_window():
-            alloc = self.get_allocation()
-            args = (alloc.width, alloc.height, alloc.x, alloc.y)
-            rect = Gdk.Rectangle(*args)
-            #rect = apply(gtk.gdk.Rectangle, tuple(self.allocation))
-            rect.x = 0
-            rect.y = 0
-            rect.height = max(rect.height, self.get_vadjustment().upper)
-            self.get_bin_window().invalidate_rect(rect, False)
 
     def get_thumbnail_width(self):
         return self.real_thumbnail_width
@@ -235,21 +248,6 @@ class ThumbnailsView(Gtk.Layout):
         self.invalidate_view()
         self.update_layout()
     thumbnail_width = property(get_thumbnail_width, set_thumbnail_width)
-
-    def get_focus_cell(self):
-        return self.real_focus_cell
-
-    def set_focus_cell(self, value):
-        if value < 0:
-            value = 0
-        if value >= len(self.items):
-            value = len(self.items) - 1
-        if value != self.real_focus_cell:
-            self.invalidate_cell(value)
-            self.invalidate_cell(self.real_focus_cell)
-            self.real_focus_cell = value
-
-    focus_cell = property(get_focus_cell, set_focus_cell)
 
     def on_key_press(self, widget, event):
         shift = event.state & (Gdk.KEY_Shift_L | Gdk.KEY_Shift_R)
@@ -310,97 +308,6 @@ class ThumbnailsView(Gtk.Layout):
         self.scroll_to(self.focus_cell)
         return True
 
-    def notify_selection_change(self, old_selection):
-        for cell in old_selection:
-            if not cell in self.selection:
-                self.invalidate_cell(cell)
-        for cell in self.selection:
-            if not cell in old_selection:
-                self.invalidate_cell(cell)
-
-    def on_button_press(self, widget, event):
-        cell_num = self.cell_at_position(event.x, event.y, False)
-        if cell_num < 0:
-            self.selection.empty()
-            return False
-
-        if event.type == gtk.gdk.BUTTON_PRESS:
-            self.grab_focus()
-            ctrl = event.state & gtk.gdk.CONTROL_MASK
-            shift = event.state & gtk.gdk.SHIFT_MASK
-            self.selection.freeze()
-            if ctrl or event.button == 2:
-                if cell_num in self.selection:
-                    self.selection.remove(cell_num)
-                else:
-                    self.selection.append(cell_num)
-            elif shift:
-                for i in range(min(self.focus_cell, cell_num),
-                               max(self.focus_cell, cell_num) + 1):
-                    if not i in self.selection:
-                        self.selection.append(i)
-            else:
-                # don't set selection if target is already selected
-                if (event.button == 3 or event.button == 1) and \
-                        cell_num not in self.selection:
-                    self.selection.set([cell_num])
-
-            # needed before thaw() ! else it will not be good in
-            # notification event !!!!!
-            self.focus_cell = cell_num
-            self.selection.thaw()
-
-            self.queue_resize()
-
-            # ~ if event.button != 1:
-                # ~ return True
-
-            return False
-
-        # ~ if event.type == gtk.gdk._2BUTTON_PRESS and event.button == 1:
-            # ~ self.focus_cell = cell_num
-            # ~ self.app.on_fullscreen_activate()
-
-    def invalidate_cell(self, order):
-        vadjustment = self.get_vadjustment()
-        hadjustment = self.get_hadjustment()
-
-        cell_area = self.cell_bounds(order, None)
-        cell_area = cell_area[0:1] + (cell_area[2] - 1, cell_area[3] - 1)
-        visible = (int(hadjustment.value), int(vadjustment.value),
-                   self.get_allocation().width, self.get_allocation().height)
-        cell_area = rectIntersect(cell_area, visible)
-        if self.bin_window and cell_area[2] != 0:
-            self.bin_window.invalidate_rect(cell_area, False)
-
-    def cell_at_position(self, x, y, crop_visible=True):
-        vadjustment = self.get_vadjustment()
-        hadjustment = self.get_hadjustment()
-        if crop_visible and (
-                (y < vadjustment.value or
-                    y > vadjustment.value + self.allocation.height) or (
-                x < hadjustment.value or
-                x > hadjustment.value + self.allocation.width)):
-            return -1
-
-        if x < BORDER_SIZE or \
-                x >= BORDER_SIZE + self.cells_per_row * self.cell_width:
-            return -1
-
-        if y < BORDER_SIZE or \
-                y >= BORDER_SIZE + \
-                (len(self.items) / self.cells_per_row + 1) * self.cell_height:
-            return -1
-
-        column = int((x - BORDER_SIZE) / self.cell_width)
-        row = int((y - BORDER_SIZE) / self.cell_height)
-        cell_num = column + row * self.cells_per_row
-
-        if cell_num < len(self.items):
-            return cell_num
-        else:
-            return -1
-
     def on_adjustment_value_changed(self, adj, *args):
         self.visible.y = int(adj.get_value())
         self.do_scroll()
@@ -409,15 +316,7 @@ class ThumbnailsView(Gtk.Layout):
         self.do_scroll()
 
     def do_scroll(self):
-        #vadjustment = self.get_vadjustment()
-        #hadjustment = self.get_hadjustment()
-        # FIXME not sure what is this good for
-        # it is run when closing full-screen view of individual images,
         pass
-
-    def on_size_allocate(self, widget, rectangle):
-        self.update_layout(rectangle)
-        return True
 
     def update_layout(self, rectangle=None):
         if rectangle is None:
@@ -437,7 +336,7 @@ class ThumbnailsView(Gtk.Layout):
         vadjustment.connect('value-changed', self.on_adjustment_value_changed)
         x = hadjustment.get_value()
         y = self.height * self.scroll_value
-        self.set_size(x, y, self.get_allocation().width, self.height)
+        self.set_size(x, y, self.visible.width, self.height)
 
     def set_size(self, x, y, width, height):
         vadjustment = self.get_vadjustment()
@@ -469,7 +368,7 @@ class ThumbnailsView(Gtk.Layout):
             self.scroll = False
 
         if width != self.get_allocation().width or height != self.get_allocation().height:
-            Gtk.Layout.set_size(self, self.get_allocation().width, height)
+            Gtk.Layout.set_size(self, width, height)
 
         if xchange or ychange:
             vadjustment.change_value()
@@ -746,19 +645,7 @@ class ListView(ThumbnailsView):
 
     def __init__(self):
         ThumbnailsView.__init__(self)
-
-        # if self.allow_drag:
-        #     # allow drag'n'drop from
-        #     self.drag_source_set(Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.BUTTON2_MASK,
-        #                          [('STRING', 0, 111), ],
-        #                          Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
-        #
-        # if self.allow_drop:
-        #     # allow drag'n'drop to
-        #     self.drag_dest_set(Gtk.DestDefaults.ALL, [('STRING', 0, 111), ],
-        #                        Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
-        #     self.connect("drag_data_received",
-        #                  self.on_drag_data_received_data)
+        self.set_visible(True)
 
     def on_drag_data_received_data(self, widget, object, x, y, sdata, code,
                                    time):
@@ -778,10 +665,6 @@ class ListView(ThumbnailsView):
     def init(self, l):
         self.set_photos(l)
 
-    def refresh(self):
-        """ refresh the layout """
-        self.update_layout()
-
     def get_text(self, idx):
         item = self.items[idx]
         return item.display
@@ -793,56 +676,6 @@ class ListView(ThumbnailsView):
     def is_thumb(self, idx):
         item = self.items[idx]
         return Cache.exists(item)
-
-
-class TestLayoutMgr(Gtk.Dialog):
-    def __init__(self, path_base):
-        Gtk.Dialog.__init__(self, 'TestLayout', None,
-                            (Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT),
-                            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                            Gtk.STOCK_CLOSE, Gtk.ResponseType.CLOSE))
-        self.path_base = path_base
-        self.create_gui()
-
-    def create_gui(self):
-        self.icon_view = ListView()
-
-
-        self.icon_view.connect('key-press-event', self.on_key_press)
-        self.icon_view.connect('button-press-event', self.on_button_press)
-
-        l = ImageFile.load(self.path_base)
-
-        self.icon_view.set_photos(l)
-        sclwin = Gtk.ScrolledWindow()
-        sclwin.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.ALWAYS)
-        sclwin.add(self.icon_view)
-        print(self.icon_view.get_parent())
-        ss = sclwin.get_vscrollbar()
-        ss.set_value(550)
-        self.icon_view.grab_focus()
-        self.vbox.pack_start(sclwin, True, True, 0)
-        hbox = Gtk.HBox()
-        self.vbox.pack_start(hbox, False, False, 0)
-        hscale = Gtk.HScale()
-        hscale.set_size_request(100, -1)
-        hscale.set_property('draw-value', False)
-        hscale.set_range(50, 160)
-        hscale.connect('value-changed', self.zoom_changed)
-        hscale.set_value(160)
-        hbox.pack_end(hscale, False, False, 0)
-        self.resize(580, 320)
-        self.show_all()
-
-    def on_key_press(self, widget, event):
-        print("Event keypress", Gdk.keyval_name(event.keyval).lower())
-
-    def on_button_press(self, widget, event):
-        print("Event buttonpress", event.button, event.type)
-
-    def zoom_changed(self, widget):
-        self.icon_view.thumbnail_width = int(widget.get_value())
-
 
 class Cache:
     __buf = {}
