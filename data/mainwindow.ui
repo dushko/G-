@@ -72,12 +72,27 @@
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
-         <widget class="QTreeWidget" name="treeWidget">
-          <column>
-           <property name="text">
-            <string notr="true">1</string>
+         <widget class="QStackedWidget" name="stackLeft">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QTreeWidget" name="treeAlbums">
+           <property name="columnCount">
+            <number>1</number>
            </property>
-          </column>
+           <column>
+            <property name="text">
+             <string notr="true">1</string>
+            </property>
+           </column>
+          </widget>
+          <widget class="QTreeWidget" name="treeTags">
+           <column>
+            <property name="text">
+             <string notr="true">1</string>
+            </property>
+           </column>
+          </widget>
          </widget>
         </widget>
         <widget class="QTreeWidget" name="treeWidget_2">
