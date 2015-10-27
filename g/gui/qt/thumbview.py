@@ -1,10 +1,11 @@
-from PyQt5.QtCore import QLine, QRect
-from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent
+from PyQt5.QtCore import QLine, QRect, QPoint, Qt
+from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent, QFont, QTextOption
 from PyQt5.QtWidgets import QWidget, QLayout, QVBoxLayout, QLabel, QGraphicsScene, QGraphicsView, \
     QScrollArea, QSizePolicy, QGridLayout, QScrollBar
 
 from g.gui.common.layoutengine import LayoutEngine
 from g.gui.common.rectangle import Rectangle
+from g.core.db.nodes import PhotoNode
 
 class GScrollArea(QScrollArea):
     def __init__(self, *args):
@@ -23,6 +24,8 @@ class GScrollArea(QScrollArea):
 class ThumbView(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.items = []
 
         self.canvas = GScrollArea()
         self.canvas.setResizeEventCallback(self.canvasResizeEvent)
@@ -53,6 +56,7 @@ class ThumbView(QWidget):
             self.updateLayout(newSize.width())
 
     def setItems(self, items):
+        self.items = items
         nCells = len(items)
         print('Set items: ', nCells)
         self.layoutEngine.updateCells(nCells, 100, 100)
@@ -80,6 +84,18 @@ class ThumbView(QWidget):
 
         painter = QPainter(self.w)
         for cellNum, cell in cells.items():
-            rect = QRect(cell.x, cell.y, cell.width, cell.height)
-            painter.drawRect(rect)
+            self.drawThumnail(cellNum, self.items[cellNum], cell, painter)
+
+
+    def drawThumnail(self, n, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
+        rect = QRect(cell.x, cell.y, cell.width, cell.height)
+        bLeft = rect.bottomLeft()
+        fontHeight = 20
+        font = painter.font()
+        font.setPixelSize(fontHeight)
+        textTopRight = QPoint(bLeft.x(), bLeft.y() - fontHeight)
+        textRect = QRect(textTopRight, rect.bottomRight())
+        thumbName = thumb.name
+        painter.drawText(textRect, Qt.AlignHCenter, thumbName)
+        painter.drawRect(rect)
 
