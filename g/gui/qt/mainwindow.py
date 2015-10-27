@@ -68,6 +68,9 @@ class MainWindow(QMainWindow):
         treePath = getTreePath(item, root)
         print('Album item activated', treePath)
 
+        photos = self.dbPhotos.getPhotosByPath(treePath)
+        self.thumbView.setItems(photos)
+
     def setAlbumsTree(self):
         pass
 
