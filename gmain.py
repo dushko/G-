@@ -10,7 +10,7 @@ def gui():
         import g.gui.gtk.mainwindow as mw
 
 
-    dbPhotos = g.core.db.dbphoto.DBPhotos('config/db.xml')
+    dbPhotos = g.core.db.dbphoto.DbPhotos('config/db.xml')
     dbTags = database.DBTags('config/tags.xml')
     dbAlbums = database.TreeDB(dbPhotos)
 

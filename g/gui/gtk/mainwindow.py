@@ -8,7 +8,7 @@ from g.gui.gtk.listview import ListView
 
 
 class MainWindow:
-    def __init__(self, treeDb : g.core.db.database.TreeDB, photoDb : g.core.db.dbphoto.DBPhotos, tagDb : g.core.db.database.DBTags):
+    def __init__(self, treeDb : g.core.db.database.TreeDB, photoDb : g.core.db.dbphoto.DbPhotos, tagDb : g.core.db.database.DBTags):
         self.treeDb = treeDb
         self.tagDb = tagDb
         self.photoDb = photoDb

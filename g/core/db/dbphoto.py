@@ -8,7 +8,7 @@ from g.core.db.nodes import FolderNode, PhotoNode, PhotoNode
 from g.tools import PhotoCmd, supportedFormats
 
 
-class DBPhotos:
+class DbPhotos:
     normalizeName = False
     autorotAtImport = False
 
@@ -38,7 +38,7 @@ class DBPhotos:
     @staticmethod
     def setNormalizeName(v):
         assert v in (True, False)
-        DBPhotos.normalizeName = v
+        DbPhotos.normalizeName = v
 
     @staticmethod
     def setNormalizeNameFormat( v):
@@ -48,7 +48,7 @@ class DBPhotos:
     @staticmethod
     def setAutorotAtImport(v):
         assert v in (True, False)
-        DBPhotos.autorotAtImport = v
+        DbPhotos.autorotAtImport = v
 
     def add(self, path, tags={}):
         assert type(path) == str
@@ -136,8 +136,8 @@ class DBPhotos:
 
         try:
             iii = PhotoCmd(file,
-                           needAutoRename=DBPhotos.normalizeName,
-                           needAutoRotation=DBPhotos.autorotAtImport,
+                           needAutoRename=DbPhotos.normalizeName,
+                           needAutoRotation=DbPhotos.autorotAtImport,
                            )
             if iii.exifdate == "":
                 # exif is not present, and photocmd can't reach
