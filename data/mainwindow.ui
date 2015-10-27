@@ -68,7 +68,7 @@
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
-        <widget class="QSplitter" name="splitter">
+        <widget class="QSplitter" name="splitterThumbs">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
@@ -79,7 +79,6 @@
            </property>
           </column>
          </widget>
-         <widget class="QTableWidget" name="tableWidget"/>
         </widget>
         <widget class="QTreeWidget" name="treeWidget_2">
          <column>
