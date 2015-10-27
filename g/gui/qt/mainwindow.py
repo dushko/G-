@@ -1,4 +1,5 @@
 import sys
+import os.path
 
 from PyQt5.QtGui import QIcon
 from PyQt5.uic import loadUi
@@ -44,11 +45,28 @@ class MainWindow(QMainWindow):
         self.splitterThumbs.addWidget(self.thumbView)
 
         self.stackLeftActivateAlbums()
-        albumsTreeData = self.dbPhotos.getAlbumTree()
+        self.albumsTreeData = self.dbPhotos.getAlbumTree()
 
         self.treeAlbums.headerItem().setText(0, 'Albums')
-        self.fillTreeWidget(self.treeAlbums, albumsTreeData)
+        self.fillTreeWidget(self.treeAlbums, self.albumsTreeData)
 
+        self.treeAlbums.itemActivated.connect(self.onTreeAlbumsItemActivated)
+
+    def onTreeAlbumsItemActivated(self, item : QTreeWidgetItem, column : int):
+        def getTreePath(item : QTreeWidgetItem, root : str):
+            path = []
+            while item is not None:
+                path.append(item.text(0))
+                item = item.parent()
+
+            path.reverse()
+            for f in path:
+                root = os.path.join(root, f)
+            return root
+
+        root = self.albumsTreeData.parent.name
+        treePath = getTreePath(item, root)
+        print('Album item activated', treePath)
 
     def setAlbumsTree(self):
         pass
