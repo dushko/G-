@@ -8,7 +8,7 @@ from g.core.db.nodes import FolderNode, PhotoNode, PhotoNode
 from g.tools import PhotoCmd, supportedFormats
 
 
-class DbPhotos:
+class DbPhotos(object):
     normalizeName = False
     autorotAtImport = False
 
@@ -131,8 +131,6 @@ class DbPhotos:
         nodeDir.append(newNode)
 
         node = PhotoNode(newNode)
-        if file in filesInBasket:
-            node.addToBasket()
 
         try:
             iii = PhotoCmd(file,
@@ -196,16 +194,7 @@ class DbPhotos:
         ln = self.root.xpath(xpath)
         return ln
 
-    def toXml(self):
-        """ for tests only """
-        from io import StringIO
-        fid = StringIO()
-        fid.write("""<?xml version="1.0" encoding="UTF-8"?>""")
-        ElementTree(self.root).write(fid, encoding="utf-8")
-        return fid.getvalue()
-
     def save(self):
-        """ save the db, and a basket.txt file """
         fid = open(self.file, "wb")
         fid.write(b"""<?xml version="1.0" encoding="UTF-8"?>""")
         ElementTree(self.root).write(fid)

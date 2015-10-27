@@ -3,6 +3,7 @@ from gi.repository import Gtk, Gdk
 
 import g.core.db.database
 import g.core.db.dbphotos
+import g.core.tree
 from g.gui.gtk.gtoolbar import GToolBar, GToolButton
 from g.gui.gtk.listview import ListView
 
@@ -101,7 +102,7 @@ class MainWindow:
         self.updateTreeWidget(self.treeAlbums, self.treeDb.tree, folderIcon)
         self.updateTreeWidget(self.treeTags, self.tagDb.getTagsTree(), folderIcon)
 
-    def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.core.db.database.Tree, icon : GdkPixbuf.Pixbuf):
+    def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.core.tree.Tree, icon : GdkPixbuf.Pixbuf):
         def fillStore(st : Gtk.TreeStore, treeStruct, ico : GdkPixbuf.Pixbuf):
             def helper(storeIter, tr):
                 p = tr.getFullPath()
