@@ -2,13 +2,13 @@ from gi.repository import GdkPixbuf
 from gi.repository import Gtk, Gdk
 
 import g.core.db.database
-import g.core.db.dpphoto
+import g.core.db.dbphoto
 from g.gui.gtk.gtoolbar import GToolBar, GToolButton
 from g.gui.gtk.listview import ListView
 
 
 class MainWindow:
-    def __init__(self, treeDb : g.core.db.database.TreeDB, photoDb : g.core.db.dpphoto.DBPhotos, tagDb : g.core.db.database.DBTags):
+    def __init__(self, treeDb : g.core.db.database.TreeDB, photoDb : g.core.db.dbphoto.DBPhotos, tagDb : g.core.db.database.DBTags):
         self.treeDb = treeDb
         self.tagDb = tagDb
         self.photoDb = photoDb
