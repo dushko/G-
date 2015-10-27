@@ -1,12 +1,13 @@
-from gi.repository import Gtk, Gdk
 from gi.repository import GdkPixbuf
+from gi.repository import Gtk, Gdk
 
-import g.db
+import g.core.db.database
 from g.gui.gtk.gtoolbar import GToolBar, GToolButton
 from g.gui.gtk.listview import ListView
 
+
 class MainWindow:
-    def __init__(self, treeDb : g.db.TreeDB, photoDb : g.db.DBPhotos, tagDb : g.db.DBTags):
+    def __init__(self, treeDb : g.core.db.database.TreeDB, photoDb : g.core.db.database.DBPhotos, tagDb : g.core.db.database.DBTags):
         self.treeDb = treeDb
         self.tagDb = tagDb
         self.photoDb = photoDb
@@ -99,7 +100,7 @@ class MainWindow:
         self.updateTreeWidget(self.treeAlbums, self.treeDb.tree, folderIcon)
         self.updateTreeWidget(self.treeTags, self.tagDb.getTagsTree(), folderIcon)
 
-    def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.db.Tree, icon : GdkPixbuf.Pixbuf):
+    def updateTreeWidget(self, widget : Gtk.TreeView, tree : g.core.db.database.Tree, icon : GdkPixbuf.Pixbuf):
         def fillStore(st : Gtk.TreeStore, treeStruct, ico : GdkPixbuf.Pixbuf):
             def helper(storeIter, tr):
                 p = tr.getFullPath()

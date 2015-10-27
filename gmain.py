@@ -1,5 +1,4 @@
-from g import db
-
+from g.core.db import database
 
 interface = 'qt'
 
@@ -10,9 +9,9 @@ def gui():
         import g.gui.gtk.mainwindow as mw
 
 
-    dbPhotos = db.DBPhotos('config/db.xml')
-    dbTags = db.DBTags('config/tags.xml')
-    dbAlbums = db.TreeDB(dbPhotos)
+    dbPhotos = database.DBPhotos('config/db.xml')
+    dbTags = database.DBTags('config/tags.xml')
+    dbAlbums = database.TreeDB(dbPhotos)
 
     mw.MainWindow.start(dbPhotos, dbAlbums, dbTags)
 
