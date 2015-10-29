@@ -241,6 +241,9 @@ class PhotoNode(object):
             self.pic = QPixmap(name).scaledToWidth(100)
         return self.pic
 
+    def getPath(self):
+        return os.path.join(self.__getFolder(), self.name)
+
     def getImage(self):
         file = self.file
         # XXX external call while pyexiv2 can't handle it
