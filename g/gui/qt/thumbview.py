@@ -86,7 +86,6 @@ class ThumbView(QWidget):
         for cellNum, cell in cells.items():
             self.drawThumnail(cellNum, self.items[cellNum], cell, painter)
 
-
     def drawThumnail(self, n, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
         rect = QRect(cell.x, cell.y, cell.width, cell.height)
         bLeft = rect.bottomLeft()
@@ -95,6 +94,9 @@ class ThumbView(QWidget):
         font.setPixelSize(fontHeight)
         textTopRight = QPoint(bLeft.x(), bLeft.y() - fontHeight)
         textRect = QRect(textTopRight, rect.bottomRight())
+        imageRect = QRect(rect.topLeft(), textRect.topRight())
+        pic = thumb.getThumb()
+        painter.drawPixmap(imageRect, pic)
         thumbName = thumb.name
         painter.drawText(textRect, Qt.AlignHCenter, thumbName)
         painter.drawRect(rect)
