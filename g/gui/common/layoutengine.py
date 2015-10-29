@@ -40,6 +40,7 @@ class LayoutEngine(object):
         self.__cellWidth = width
         self.__cellsTotal = n
         self.__updateLayout()
+        self.cells = {}
 
     def _getCellPosition(self, cellNum : int):
         row, col = divmod(cellNum, self.__columns)
@@ -49,11 +50,7 @@ class LayoutEngine(object):
         return x, y
 
     def getCellRect(self, cellNum : int) -> Rectangle:
-        row, col = divmod(cellNum, self.__columns)
-
-        x = col * self.cell_width + self.__borderSize
-        y = row * self.cell_height + self.__borderSize
-        pass
+        return self.cells.get(cellNum)
 
     def getCell(self, row : int, col : int):
         x = col * self.__cellWidth
@@ -73,15 +70,15 @@ class LayoutEngine(object):
         startRow = max(area.y // self.__cellHeight, 0)
         endRow = max(ceil((area.y + area.height) / self.__cellHeight) - 1, 0)
 
-        cells = {}
+        self.cells.clear()
         for row in range(startRow, endRow + 1):
             for col in range(startCol, endCol + 1):
                 cellNum = col + row * self.__columns
                 if cellNum >= self.__cellsTotal:
                     continue
-                cells[cellNum] = self.getCell(row, col)
+                self.cells[cellNum] = self.getCell(row, col)
 
-        return cells
+        return self.cells
 
     def __updateLayout(self):
         self.__columns = max(self.__width // self.__cellWidth, 1)
