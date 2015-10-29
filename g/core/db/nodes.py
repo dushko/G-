@@ -3,6 +3,7 @@ import os
 import shutil
 from subprocess import Popen, PIPE
 
+from PyQt5.QtGui import QPixmap
 from lxml.etree import Element
 
 from g.tools import PhotoCmd
@@ -229,35 +230,16 @@ class PhotoNode(object):
     def __init__(self, node):
         assert node.tag == "photo"
         self.__node = node
+        self.pic = None
 
     def getParent(self):
         return FolderNode(self.__node.getparent())
 
     def getThumb(self):
-        """ Get thumb from exif data"""
-        if self.real == "yes":  # real photo (exifdate !)
-            backGroundColor = None
-            pb_nothumb = Buffer.pixbufNT
-            pb_notfound = Buffer.pixbufNF
-            pb_error = Buffer.pixbufERR
-        else:       # photo with hadn't got exif before (exif setted by jbrout)
-            backGroundColor = rgb(255, 0, 0)
-            pb_nothumb = Buffer.pixbufNTNE
-            pb_notfound = Buffer.pixbufNFNE
-            pb_error = Buffer.pixbufERRNE
-
-        try:
-            i = Img(thumb=self.file)
-            pb = i.resizeC(160, backGroundColor).pixbuf
-        except IOError:  # 404
-            pb = pb_notfound
-        except KeyError:  # no exif
-            pb = pb_nothumb
-        except:
-            pb = pb_error
-            raise
-
-        return pb
+        if self.pic is None:
+            name = os.path.join(self.__getFolder(), self.name)
+            self.pic = QPixmap(name).scaledToWidth(100)
+        return self.pic
 
     def getImage(self):
         file = self.file
@@ -586,7 +568,7 @@ class PhotoNode(object):
     real = property(__getReal)
 
     def __getFolder(self):
-        na = dec(self.__node.getparent().attrib["name"])
+        na = self.__node.getparent().attrib["name"]
         assert type(na) == str
         return na
     folder = property(__getFolder)
