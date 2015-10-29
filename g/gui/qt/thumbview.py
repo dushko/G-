@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QLine, QRect, QPoint, Qt
-from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent, QFont, QTextOption
+from PyQt5.QtCore import QLine, QRect, QPoint, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent, QFont, QTextOption, QPixmap
 from PyQt5.QtWidgets import QWidget, QLayout, QVBoxLayout, QLabel, QGraphicsScene, QGraphicsView, \
     QScrollArea, QSizePolicy, QGridLayout, QScrollBar
 
@@ -22,10 +22,14 @@ class GScrollArea(QScrollArea):
             self.resizeCallback(ev)
 
 class ThumbView(QWidget):
+    needThumb = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
 
+        self.thumbs = {}
         self.items = []
+        self.noThumbPixmap = QPixmap('data/gfx/noThumb.png')
 
         self.canvas = GScrollArea()
         self.canvas.setResizeEventCallback(self.canvasResizeEvent)
@@ -89,15 +93,25 @@ class ThumbView(QWidget):
     def drawThumnail(self, n, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
         rect = QRect(cell.x, cell.y, cell.width, cell.height)
         bLeft = rect.bottomLeft()
+
+        # draw name
         fontHeight = 20
         font = painter.font()
         font.setPixelSize(fontHeight)
         textTopRight = QPoint(bLeft.x(), bLeft.y() - fontHeight)
         textRect = QRect(textTopRight, rect.bottomRight())
-        imageRect = QRect(rect.topLeft(), textRect.topRight())
-        pic = thumb.getThumb()
-        painter.drawPixmap(imageRect, pic)
         thumbName = thumb.name
         painter.drawText(textRect, Qt.AlignHCenter, thumbName)
         painter.drawRect(rect)
 
+        # draw thumb
+        imageRect = QRect(rect.topLeft(), textRect.topRight())
+        if thumb.getPath() not in self.thumbs:
+            painter.drawPixmap(imageRect, self.noThumbPixmap)
+            self.needThumb.emit(thumb.getPath())
+        else:
+            painter.drawPixmap(imageRect, self.thumbs[thumb.getPath()])
+
+    def updateThumb(self, path : str, pic : QPixmap):
+        self.thumbs[path] = pic
+        self.repaintCanvas()

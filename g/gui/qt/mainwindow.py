@@ -1,9 +1,11 @@
 import sys
 import os.path
 
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.uic import loadUi
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeWidgetItem, QTreeWidget
+
+from g.core.db.thumbreader import ThumbReader
 from g.gui.qt.gsidetoolbar import GSideToolbar
 from g.gui.qt.thumbview import ThumbView
 from g.core.tree import Tree
@@ -40,8 +42,8 @@ class MainWindow(QMainWindow):
         self.centralLayout.insertWidget(-1, self.rightSideToolbar)
         self.centralLayout.insertWidget(0, self.leftSideToolbar)
 
-
         self.thumbView = ThumbView()
+        self.thumbView.needThumb.connect(self.onThumbViewNeedThumb)
         self.splitterThumbs.addWidget(self.thumbView)
 
         self.stackLeftActivateAlbums()
@@ -51,6 +53,15 @@ class MainWindow(QMainWindow):
         self.fillTreeWidget(self.treeAlbums, self.albumsTreeData)
 
         self.treeAlbums.itemActivated.connect(self.onTreeAlbumsItemActivated)
+
+        self.thumbReader = ThumbReader(None)
+        self.thumbReader.thumbReady.connect(self.thumbView.updateThumb)
+
+    def onThumbViewNeedThumb(self, path : str):
+        self.thumbReader.add(path)
+
+    def onThumbReaderThumbReady(self, path : str, pic : QPixmap):
+        print('MW: thumb ready: ', path)
 
     def onTreeAlbumsItemActivated(self, item : QTreeWidgetItem, column : int):
         def getTreePath(item : QTreeWidgetItem, root : str):
