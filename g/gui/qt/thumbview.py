@@ -22,7 +22,7 @@ class GScrollArea(QScrollArea):
             self.resizeCallback(ev)
 
 class ThumbView(QWidget):
-    needThumb = pyqtSignal(str)
+    needThumb = pyqtSignal(int, str)
 
     def __init__(self):
         super().__init__()
@@ -90,7 +90,7 @@ class ThumbView(QWidget):
         for cellNum, cell in cells.items():
             self.drawThumnail(cellNum, self.items[cellNum], cell, painter)
 
-    def drawThumnail(self, n, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
+    def drawThumnail(self, cellNum : int, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
         rect = QRect(cell.x, cell.y, cell.width, cell.height)
         bLeft = rect.bottomLeft()
 
@@ -108,10 +108,10 @@ class ThumbView(QWidget):
         imageRect = QRect(rect.topLeft(), textRect.topRight())
         if thumb.getPath() not in self.thumbs:
             painter.drawPixmap(imageRect, self.noThumbPixmap)
-            self.needThumb.emit(thumb.getPath())
+            self.needThumb.emit(cellNum, thumb.getPath())
         else:
             painter.drawPixmap(imageRect, self.thumbs[thumb.getPath()])
 
-    def updateThumb(self, path : str, pic : QPixmap):
+    def updateThumb(self, thumbId : int, path : str, pic : QPixmap):
         self.thumbs[path] = pic
         self.repaintCanvas()

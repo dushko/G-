@@ -57,8 +57,8 @@ class MainWindow(QMainWindow):
         self.thumbReader = ThumbReader(None)
         self.thumbReader.thumbReady.connect(self.thumbView.updateThumb)
 
-    def onThumbViewNeedThumb(self, path : str):
-        self.thumbReader.add(path)
+    def onThumbViewNeedThumb(self, thumbNumber : int, path : str):
+        self.thumbReader.add(thumbNumber, path)
 
     def onThumbReaderThumbReady(self, path : str, pic : QPixmap):
         print('MW: thumb ready: ', path)
