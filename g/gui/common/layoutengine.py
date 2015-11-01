@@ -20,6 +20,8 @@ class LayoutEngine(object):
 
     def getCellWidth(self):
         return self.__cellWidth
+    def getCellHeight(self):
+        return self.__cellHeight
 
     def updateWidth(self, width : int):
         self.__width = width
