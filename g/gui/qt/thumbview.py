@@ -29,6 +29,7 @@ class ThumbView(QWidget):
 
         self.thumbs = {}
         self.items = []
+        self.cellsInView = {}
         self.noThumbPixmap = QPixmap('data/gfx/noThumb.png')
 
         self.canvas = GScrollArea()
@@ -37,6 +38,7 @@ class ThumbView(QWidget):
         self.w.paintEvent = self.canvasPaintEvent
         self.canvas.setWidget(self.w)
         self.canvas.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+
 
         label = QLabel('Thumbnails view')
 
@@ -87,10 +89,21 @@ class ThumbView(QWidget):
         cells = self.layoutEngine.getVisibleCells(repaintArea)
 
         painter = QPainter(self.w)
-        for cellNum, cell in cells.items():
-            self.drawThumnail(cellNum, self.items[cellNum], cell, painter)
 
-    def drawThumnail(self, cellNum : int, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
+
+        thumbRequested = False
+        for cellNum, cell in cells.items():
+            thumb = self.items[cellNum]
+            if thumb.getPath() in self.thumbs:
+                self.drawThumnail(cellNum, self.thumbs[thumb.getPath()], thumb, cell, painter)
+            else:
+                if not thumbRequested:
+                    self.needThumb.emit(cellNum, thumb.getPath())
+                    thumbRequested = True
+                self.drawThumnail(cellNum, self.noThumbPixmap, self.items[cellNum],
+                        cell, painter)
+
+    def drawThumnail(self, cellNum, pic, thumb : PhotoNode, cell : Rectangle, painter : QPainter):
         rect = QRect(cell.x, cell.y, cell.width, cell.height)
         bLeft = rect.bottomLeft()
 
@@ -105,12 +118,9 @@ class ThumbView(QWidget):
         painter.drawRect(rect)
 
         # draw thumb
+        thumbRequested = False
         imageRect = QRect(rect.topLeft(), textRect.topRight())
-        if thumb.getPath() not in self.thumbs:
-            painter.drawPixmap(imageRect, self.noThumbPixmap)
-            self.needThumb.emit(cellNum, thumb.getPath())
-        else:
-            painter.drawPixmap(imageRect, self.thumbs[thumb.getPath()])
+        painter.drawPixmap(imageRect, pic)
 
     def updateThumb(self, thumbId : int, path : str, pic : QPixmap):
         self.thumbs[path] = pic
