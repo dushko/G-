@@ -6,7 +6,6 @@ from subprocess import Popen, PIPE
 from PyQt5.QtGui import QPixmap
 from lxml.etree import Element
 
-from g.tools import PhotoCmd
 
 
 class FolderNode(object):

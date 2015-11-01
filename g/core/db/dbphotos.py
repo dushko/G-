@@ -5,7 +5,6 @@ from lxml.etree import ElementTree, Element
 from g.common import cd2d
 from g.core.db.database import TreeDB, walktree
 from g.core.db.nodes import FolderNode, PhotoNode, PhotoNode
-from g.tools import PhotoCmd, supportedFormats
 
 
 class DbPhotos(object):
