@@ -1,6 +1,7 @@
 import sys
 import os.path
 
+from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.uic import loadUi
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeWidgetItem, QTreeWidget
@@ -28,6 +29,7 @@ class MainWindow(QMainWindow):
         self.dbPhotos = args[0]
         ''' :type DbPhotos'''
         self.dbTags = args[2]
+        self.dbThumbs = args[3]
 
         loadUi('data/mainwindow.ui', self)
 
@@ -43,7 +45,7 @@ class MainWindow(QMainWindow):
         self.centralLayout.insertWidget(0, self.leftSideToolbar)
 
         self.thumbView = ThumbView()
-        self.thumbView.needThumb.connect(self.onThumbViewNeedThumb)
+        self.thumbView.needThumb.connect(self.onThumbViewNeedThumb, Qt.QueuedConnection)
         self.splitterThumbs.addWidget(self.thumbView)
 
         self.stackLeftActivateAlbums()
@@ -54,9 +56,10 @@ class MainWindow(QMainWindow):
 
         self.treeAlbums.itemActivated.connect(self.onTreeAlbumsItemActivated)
 
-        self.thumbReader = ThumbReader(None)
+        self.thumbReader = ThumbReader(self.dbThumbs)
         self.thumbReader.thumbReady.connect(self.thumbView.updateThumb)
 
+    @pyqtSlot(int, str)
     def onThumbViewNeedThumb(self, thumbNumber : int, path : str):
         self.thumbReader.add(thumbNumber, path)
 

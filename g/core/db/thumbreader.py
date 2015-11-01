@@ -1,15 +1,30 @@
-import heapq
-import queue
+import heapq, queue, io
 from queue import Queue
-from threading import Lock
 
-from PIL import Image, ImageQt
+from PIL import Image
 
 import time
-from PyQt5.QtCore import QObject, pyqtSignal, QThread
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QObject, pyqtSignal, QThread, QEventLoop, QCoreApplication
+from PyQt5.QtWidgets import QApplication
 
-from g.core.db.dbthumbs import DBThumbs
+from g.core.db.dbthumbs import DbThumbsSqlite
+
+def getThumb(path : str, size : tuple):
+    im = Image.open(path)
+    im.thumbnail(size)
+    return im
+
+def rawToPilIm(raw):
+    inData = io.BytesIO(raw)
+    im = Image.open(inData)
+    return im
+
+def pilImToRaw(im):
+    out = io.BytesIO()
+    im.save(out, format='JPEG', quality=90)
+    data = out.getvalue()
+    out.close()
+    return data
 
 class ReaderTask(object):
     def __init__(self, priority : int, path : str):
@@ -21,17 +36,25 @@ class ReaderTask(object):
 
 
 class WorkerReader(QThread):
-    newThumb = pyqtSignal(int, str, QPixmap)
+    newThumb = pyqtSignal(int, str, Image.Image)
 
-    def __init__(self):
+    def __init__(self, dbThumbs : DbThumbsSqlite):
         super().__init__()
         self.tasksAdd = Queue()
         self.tasksRemove = Queue()
         self.thumbWidth = 200
         self.enabled = True
+        self.dbThumbs = dbThumbs
 
     def addTask(self, thumbNumber : int, path : str):
         task = (thumbNumber, path)
+
+        try:
+            while True:
+                t = self.tasksAdd.get(False)
+        except queue.Empty as _:
+            pass
+
         self.tasksAdd.put(task)
 
     def stop(self):
@@ -62,14 +85,14 @@ class WorkerReader(QThread):
 
             if len(toRead) != 0:
                 counter = 0
+                size = (256, 256)
+
                 task = heapq.heappop(toRead)
                 path = task[1]
                 thumbId = task[0]
-                size = (160, 140)
-                im = Image.open(path)
-                im.thumbnail(size)
-                pic = ImageQt.toqpixmap(im)
-                self.newThumb.emit(thumbId, path, pic)
+
+                im = getThumb(path, size)
+                self.newThumb.emit(thumbId, path, im)
 
             time.sleep(sleepTime)
             counter += 1
@@ -77,24 +100,33 @@ class WorkerReader(QThread):
                 sleepTime = 1.0
 
 class ThumbReader(QObject):
-    thumbReady = pyqtSignal(int, str, QPixmap)
+    thumbReady = pyqtSignal(int, str, Image.Image)
 
-    def __init__(self, dbThumbs : DBThumbs):
+    def __init__(self, dbThumbs : DbThumbsSqlite):
         super().__init__()
+
+        self.dbThumbs = dbThumbs
         self.thread = QThread()
         self.worker = None
-        self.startWorker()
+        self.__startWorker()
 
     def add(self, thumbNumber : int, path : str):
-        self.worker.addTask(thumbNumber, path)
+        rawThumb = self.dbThumbs.getByFilePath(path)
+        if rawThumb:
+            self.thumbReady.emit(thumbNumber, path, rawToPilIm(rawThumb))
+        else:
+            self.worker.addTask(thumbNumber, path)
 
     def getByFilePathAsync(self, paths : list):
         pass
 
-    def onNewThumb(self, thumbId : int, path : str, pic : QPixmap):
+    def onNewThumb(self, thumbId : int, path : str, pic : Image.Image):
+        #print('got thumb: ', path)
+        self.dbThumbs.addByFilePath(path, pilImToRaw(pic))
+
         self.thumbReady.emit(thumbId, path, pic)
 
-    def startWorker(self):
-        self.worker = WorkerReader()
+    def __startWorker(self):
+        self.worker = WorkerReader(self.dbThumbs)
         self.worker.newThumb.connect(self.onNewThumb)
         self.worker.start()

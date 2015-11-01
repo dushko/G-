@@ -1,11 +1,15 @@
-from PyQt5.QtCore import QLine, QRect, QPoint, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent, QFont, QTextOption, QPixmap
-from PyQt5.QtWidgets import QWidget, QLayout, QVBoxLayout, QLabel, QGraphicsScene, QGraphicsView, \
-    QScrollArea, QSizePolicy, QGridLayout, QScrollBar
+from PyQt5 import QtCore
 
+from PIL import Image, ImageQt
+from PyQt5.QtCore import QRect, QPoint, Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QPaintEvent, QPainter, QResizeEvent, QPixmap, \
+    QImage
+from PyQt5.QtWidgets import QWidget, QLabel, QScrollArea, QSizePolicy, QGridLayout
+
+from g.core.db.nodes import PhotoNode
 from g.gui.common.layoutengine import LayoutEngine
 from g.gui.common.rectangle import Rectangle
-from g.core.db.nodes import PhotoNode
+
 
 class GScrollArea(QScrollArea):
     def __init__(self, *args):
@@ -25,12 +29,19 @@ class ThumbView(QWidget):
     needThumb = pyqtSignal(int, str)
 
     def __init__(self):
+        self.counter = 0
         super().__init__()
+
+        self.thumbWidth = 100
+        self.thumbHeight = 80
 
         self.thumbs = {}
         self.items = []
         self.cellsInView = {}
+
         self.noThumbPixmap = QPixmap('data/gfx/noThumb.png')
+        self.noThumbPixmap = self.resizeImage(self.noThumbPixmap,
+                (self.thumbWidth, self.thumbHeight))
 
         self.canvas = GScrollArea()
         self.canvas.setResizeEventCallback(self.canvasResizeEvent)
@@ -79,25 +90,25 @@ class ThumbView(QWidget):
 
     def setCanvasSize(self, w, h):
         self.w.resize(w, h)
-        print('New canvas size: ', w, '  ', h)
 
     def canvasPaintEvent(self, ev : QPaintEvent):
+        print(self.counter, '  ', end='')
+        self.counter += 1
         repaintRect = ev.rect()
         repaintArea = Rectangle(repaintRect.x(), repaintRect.y(), repaintRect.width(),
                 repaintRect.height())
 
-        cells = self.layoutEngine.getVisibleCells(repaintArea)
-
         painter = QPainter(self.w)
 
-
         thumbRequested = False
+        cells = self.layoutEngine.getVisibleCells(repaintArea)
         for cellNum, cell in cells.items():
             thumb = self.items[cellNum]
             if thumb.getPath() in self.thumbs:
                 self.drawThumnail(cellNum, self.thumbs[thumb.getPath()], thumb, cell, painter)
             else:
                 if not thumbRequested:
+
                     self.needThumb.emit(cellNum, thumb.getPath())
                     thumbRequested = True
                 self.drawThumnail(cellNum, self.noThumbPixmap, self.items[cellNum],
@@ -115,13 +126,40 @@ class ThumbView(QWidget):
         textRect = QRect(textTopRight, rect.bottomRight())
         thumbName = thumb.name
         painter.drawText(textRect, Qt.AlignHCenter, thumbName)
-        painter.drawRect(rect)
+        #painter.drawRect(rect)
 
         # draw thumb
-        thumbRequested = False
         imageRect = QRect(rect.topLeft(), textRect.topRight())
-        painter.drawPixmap(imageRect, pic)
+        imageCenter = imageRect.center()
+        imageX = int(imageCenter.x() - pic.width() / 2)
+        imageY = int(imageCenter.y() - pic.height() / 2)
+        imageOrigin = QPoint(imageX, imageY)
+        painter.drawPixmap(imageOrigin, pic)
 
-    def updateThumb(self, thumbId : int, path : str, pic : QPixmap):
-        self.thumbs[path] = pic
+    @pyqtSlot(int, str, Image.Image)
+    def updateThumb(self, thumbId : int, path : str, pic : Image.Image):
+        thumb = ImageQt.toqimage(pic)
+        thumb = self.resizeImage(thumb, (self.thumbWidth, self.thumbHeight))
+        thumb = QPixmap.fromImage(thumb)
+
+        self.thumbs[path] = thumb
         self.repaintCanvas()
+
+    def resizeImage(self, img : QImage, size : tuple):
+        x = img.width()
+        y = img.height()
+
+        if x <= size[0] and y <= size[1]:
+            return img
+
+        origK = img.height() / img.width()
+
+        if x > size[0]:
+            x = size[0]
+            y = int(origK * x)
+
+        if y > size[1]:
+            y = size[1]
+            x = (y / origK)
+
+        return img.scaled(x, y, transformMode=QtCore.Qt.SmoothTransformation)
